@@ -12,11 +12,11 @@ const init = async () => {
   await initFunctions.client.connect();
   await initFunctions.createTables();
   const [user1, user2, user3, user4] = await client.fetchUser();
-  const [skill1, skill2, skill3, skill4] = await client.fetchSkills();
-  const userSkills = await Promise.all(
-    (await client.addUserSkills(user1.id, user2.id),
-    client.addUserSkill(user1.id, skill2.id),
-    client.addUserSkill(user2.id, skill3.id))
+  const [product1, product2, product3, product4] = await client.fetchProducts();
+  const Favorites = await Promise.all(
+    (await client.addFavorites(user1.id, user2.id),
+    client.addFavorites(user1.id, product2.id),
+    client.addFavorites(user2.id, product3.id))
   );
 
   const [] = await client.fetch();
