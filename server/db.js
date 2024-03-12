@@ -7,7 +7,6 @@ const client = new pg.Client(
 );
 
 module.exports = client;
-const UUID = "uuid";
 
 // const createTables = async () => {
 //   const SQL = `
@@ -58,39 +57,64 @@ const UUID = "uuid";
 // };
 
 const createTables = async () => {
-  const SQL = `
-  
-    DROP TABLE IF EXISTS favorites CASCADE;
-    DROP TABLE IF EXISTS users CASCADE;
-    DROP TABLE IF EXISTS products CASCADE;
-   
-    CREATE TABLE products(
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      name VARCHAR(255) NOT NULL
-      );
-     
-      CREATE TABLE users(
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          name VARCHAR(255) NOT NULL,
-          password VARCHAR(255) NOT NULL
+  const UUID = "uuid";
+  try {
+    await client.query("DROP TABLE IF EXISTS favorites CASCADE;");
+    await client.query("DROP TABLE IF EXISTS users CASCADE;");
+    await client.query("DROP TABLE IF EXISTS products CASCADE;");
+    await client.query(`
+          CREATE TABLE products (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(255) NOT NULL
           );
-      
-         CREATE TABLE favorites(
-          id UUID PRIMARY KEY,
-          users_id UUID REFERENCES users(id),
-          products_id UUID REFERENCES products(id),
-          CONSTRAINT unique_product_user UNIQUE (user_id,products_id)
+        `);
+    await client.query(`
+          CREATE TABLE users (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(255) NOT NULL,
+            password VARCHAR(255) NOT NULL
           );
-  
-          INSERT INTO  users (name) VALUES ('Dillard');
-         
-          `;
-  await client.query(SQL, [
-    await bcrypt.hash("password", 5),
-    await bcrypt.hash("password", 5),
-    await bcrypt.hash("password", 5),
-    await bcrypt.hash("password", 5),
-  ]);
+        `);
+    await client.query(`
+          CREATE TABLE favorites (
+            id UUID PRIMARY KEY,
+            user_id UUID REFERENCES users(id),
+            product_id UUID REFERENCES products(id),
+            CONSTRAINT unique_product_user UNIQUE (user_id, product_id)
+          );
+        `);
+    await client.query(
+      `
+          INSERT INTO users (name, password) VALUES
+            ('Dillard', $1),
+            ('Tony', $2),
+            ('Michael', $3),
+            ('Morty', $4);
+        `,
+      [
+        await bcrypt.hash("password", 5),
+        await bcrypt.hash("password", 5),
+        await bcrypt.hash("password", 5),
+        await bcrypt.hash("password", 5),
+      ]
+    );
+    await client.query(`
+          INSERT INTO products (name) VALUES
+            ('T-shirt'),
+            ('Key-chain'),
+            ('funpops'),
+            ('Flashlight');
+        `);
+    await client.query(`
+          INSERT INTO favorites (id, product_id) VALUES
+            ('${UUID}', 'T-shirt'),
+            ('${UUID}', 'Key-chain'),
+            ('${UUID}', 'funpops'),
+            ('${UUID}', 'Flashlight');
+        `);
+  } catch (error) {
+    console.error("Error executing SQL queries:", error);
+  }
 };
 
 const autheticateUser = async () => {
@@ -136,7 +160,7 @@ const createProducts = async (products_id) => {
   return response.rows;
 };
 
-const fetchUsers = async (user_id) => {
+const fetchUsers = async (client, user_id) => {
   const SQL = `
     SELECT * from users
     WHERE id =$1
